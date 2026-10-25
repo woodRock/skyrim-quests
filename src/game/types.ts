@@ -33,6 +33,8 @@ export interface Quest {
   dragon?: string
   /** Misc objectives: the last day this was done. */
   lastDone?: string
+  /** Dailies: how many days this has been done. Each one counts toward opening the map. */
+  completions?: number
 }
 
 export interface Chronicle {

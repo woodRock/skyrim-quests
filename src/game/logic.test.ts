@@ -5,6 +5,7 @@ import {
   consumeItem, xpMultiplier, UNBOUND_ID, yesterdayOf,
 } from './logic'
 import { CONSTELLATIONS } from './constellations'
+import { questsDone } from './holds'
 import type { GameFile, Quest } from './types'
 
 const base = () => newFile(1, 'Lydia', 'Nord', 1_000)
@@ -189,5 +190,36 @@ describe('merchant and items', () => {
     const f = chooseStone(base(), 'thief').file
     expect(xpMultiplier(f, 'SPEECH', 0)).toBeCloseTo(1.2); expect(xpMultiplier(f, 'SMITHING', 0)).toBe(1)
     expect(maxHealth(f)).toBe(12); expect(today().length).toBe(10)
+  })
+})
+
+describe('map progression', () => {
+  it('counts each day a daily is done, alongside finished side quests', () => {
+    let f = base()
+    f = side(f).file
+    f = completeSide(f, f.quests[0].id).file
+    expect(questsDone(f)).toBe(1)
+    f = misc(f).file
+    const id = f.quests[0].id
+    f = markMisc(f, id, '2026-10-01').file
+    f = markMisc(f, id, '2026-10-01').file   // same day: no double count
+    f = markMisc(f, id, '2026-10-02').file
+    expect(f.quests[0].completions).toBe(2)
+    expect(questsDone(f)).toBe(3)
+  })
+  it('a daily can be the one that opens a hold', () => {
+    let f = base()
+    f.quests = f.quests.map((q) => ({ ...q, doneAt: 1 }))   // Unbound done: Whiterun and the stones open
+    f.holds = ['riverwood', 'whiterun', 'stones']
+    f = misc(f).file
+    const id = f.quests[0].id
+    const opened: string[] = []
+    for (let d = 1; d <= 5; d++) {
+      const r = markMisc(f, id, `2026-10-0${d}`); f = r.file
+      for (const e of r.events) if (e.type === 'hold') opened.push(`${e.hold}@day${d}`)
+    }
+    expect(questsDone(f)).toBe(6)   // Unbound plus five mornings
+    expect(f.holds).toContain('solitude')
+    expect(opened).toEqual(['solitude@day4'])
   })
 })

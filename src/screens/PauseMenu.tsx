@@ -56,6 +56,7 @@ function Map() {
   if (!file) return null
   return (
     <div className="holds">
+      <div className="section skyrim-font" style={{ gridColumn: '1 / -1', margin: '0 0 2px' }}>THE MAP <span className="meaning">side and main quests open holds · dailies count each day</span></div>
       {HOLDS.map((h) => {
         const open = file.holds.includes(h.id)
         const here = file.hold === h.id
@@ -64,7 +65,8 @@ function Map() {
           <button key={h.id} className={`hold-card ${here ? 'here' : ''}`} disabled={!open || here} onClick={() => { play('open'); travel(h.id) }} style={open ? { background: `linear-gradient(${h.sky[0]}, ${h.sky[1]})` } : undefined}>
             <span className="skyrim-font">{open ? h.name : '???'}</span>
             <span className="serif sub">{open ? h.hint : h.unlock}</span>
-            {open && <span className="meaning">{here ? 'you are here' : `${active} active`}</span>}
+            {open ? <span className="meaning">{here ? 'you are here' : `${active} active`}</span>
+              : h.progress && <span className="meaning">{Math.min(...h.progress(file))} of {h.progress(file)[1]} so far</span>}
           </button>
         )
       })}

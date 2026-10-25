@@ -199,10 +199,12 @@ export function markMisc(file: GameFile, id: string, day = today(), now = Date.n
   const q = f.quests.find((x) => x.id === id)
   if (!q || q.kind !== 'misc' || q.lastDone === day) return { file, events }
   q.lastDone = day
+  q.completions = (q.completions ?? 0) + 1
   grantXP(f, q.skill, MISC_XP, events, now)
   addStamina(f, 1, events)
   heal(f, 1, events)
   completeObjectiveById(f, UNBOUND_ID, 'unbound-misc', events, now)
+  checkHolds(f, events)
   return { file: f, events }
 }
 
