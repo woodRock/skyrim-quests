@@ -54,7 +54,7 @@ export function EventPlayer() {
     if (!big) {
       if (e.type === 'gold') play('item')
       else if (e.type === 'heal') play('click')
-      else if (e.type === 'objective') play('quest')
+      else if (e.type === 'objective') play('objective')
       shiftEvent()
       return
     }

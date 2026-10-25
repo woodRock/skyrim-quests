@@ -36,7 +36,7 @@ export function QuestEditor({ initial, onSave, onDelete, onClose }: { initial?: 
     if (!clean) return play('close')
     const objs = objectives.filter((o) => o.title.trim()).map((o) => ({ ...o, title: o.title.trim().slice(0, 80) }))
     if (kind === 'main' && (objs.length === 0 || !dragon.trim())) return play('close')
-    play('quest')
+    play('accept')
     onSave({
       kind, title: clean, skill, hold, size: kind === 'side' ? size : 'small',
       due: kind === 'misc' ? undefined : due || undefined,

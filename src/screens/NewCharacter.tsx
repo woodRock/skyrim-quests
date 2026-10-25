@@ -13,7 +13,7 @@ export function NewCharacter() {
   const begin = () => {
     const clean = name.trim().slice(0, 16)
     if (!clean || !newSlot) return play('close')
-    play('quest')
+    play('accept')
     createFile(newSlot, clean, race)
   }
 
