@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   addQuest, advanceLevel, buyItem, castSpell, chooseStone, clearObjective, completeSide, dailyTick, finishSpell,
   loadLastSave, markMisc, maxHealth, newFile, perkStatus, scribeChronicle, shout, slayDragon, today, unlockPerk,
-  useItem, xpMultiplier, UNBOUND_ID, yesterdayOf,
+  consumeItem, xpMultiplier, UNBOUND_ID, yesterdayOf,
 } from './logic'
 import { CONSTELLATIONS } from './constellations'
 import type { GameFile, Quest } from './types'
@@ -179,11 +179,11 @@ describe('merchant and items', () => {
     expect(buyItem(f, 'skeleton-key').file).toBe(f)
     f = buyItem(f, 'potion-health').file; f = buyItem(f, 'book-speech').file
     expect(f.gold).toBe(15); expect(f.items).toHaveLength(2)
-    f = useItem(f, f.items[0].uid).file; expect(f.health).toBe(10); expect(f.items).toHaveLength(1)
-    f = useItem(f, f.items[0].uid).file; expect(f.skills.SPEECH.xp).toBe(60); expect(f.items).toHaveLength(0)
+    f = consumeItem(f, f.items[0].uid).file; expect(f.health).toBe(10); expect(f.items).toHaveLength(1)
+    f = consumeItem(f, f.items[0].uid).file; expect(f.skills.SPEECH.xp).toBe(60); expect(f.items).toHaveLength(0)
     f.items.push({ uid: 'g', id: 'amulet-akatosh' })
-    f = useItem(f, 'g').file; expect(f.equipped).toBe('amulet-akatosh'); expect(xpMultiplier(f, 'ALCHEMY', 0)).toBeCloseTo(1.1)
-    f = useItem(f, 'g').file; expect(f.equipped).toBeNull()
+    f = consumeItem(f, 'g').file; expect(f.equipped).toBe('amulet-akatosh'); expect(xpMultiplier(f, 'ALCHEMY', 0)).toBeCloseTo(1.1)
+    f = consumeItem(f, 'g').file; expect(f.equipped).toBeNull()
   })
   it('stones boost their trees', () => {
     const f = chooseStone(base(), 'thief').file

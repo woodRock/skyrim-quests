@@ -395,7 +395,7 @@ export function buyItem(file: GameFile, id: ItemId): Result {
   return { file: f, events: [{ type: 'item', item: id }] }
 }
 
-export function useItem(file: GameFile, itemUid: string, now = Date.now()): Result {
+export function consumeItem(file: GameFile, itemUid: string, now = Date.now()): Result {
   const inst = file.items.find((i) => i.uid === itemUid)
   if (!inst) return { file, events: [] }
   const item = itemById(inst.id)
