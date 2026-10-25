@@ -4,8 +4,8 @@ export type Sfx = 'click' | 'open' | 'close' | 'quest' | 'accept' | 'objective' 
 const FILES: Record<Sfx, { file: string; gain: number }> = {
   click: { file: 'click.mp3', gain: 0.2 }, open: { file: 'click.mp3', gain: 0.3 }, close: { file: 'click.mp3', gain: 0.25 },
   // Quest sounds are synthesised drums and horns (scratch script, not game audio): a war drum and low horn swell
-  // when a quest resolves, a single drum when one is taken on, a muted thud for an objective.
-  quest: { file: 'quest-complete.mp3', gain: 0.7 }, accept: { file: 'quest-new.mp3', gain: 0.55 }, objective: { file: 'objective.mp3', gain: 0.5 },
+  // when a quest resolves, a choir swell and chime when one is taken on, a muted thud for an objective.
+  quest: { file: 'quest-complete.mp3', gain: 0.7 }, accept: { file: 'quest-new.mp3', gain: 0.6 }, objective: { file: 'objective.mp3', gain: 0.5 },
   levelup: { file: 'levelup.mp3', gain: 0.8 }, skillup: { file: 'skillup.mp3', gain: 0.45 },
   spell: { file: 'spell.mp3', gain: 0.35 }, item: { file: 'item.mp3', gain: 0.4 },
   travel: { file: 'travel.mp3', gain: 0.5 },  // a deep felt piano note: setting out for, or arriving at, a hold
