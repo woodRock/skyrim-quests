@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Skyrim Wellbeing Manager</title>
+    <meta name="robots" content="noindex" />
+    <!--
+      GitHub Pages serves this for any unknown path. For a single-page app
+      a deep link like /moody-bitch/skills must load index.html instead, so we
+      stash the requested path in the query string and bounce to the app root,
+      where index.html restores it before the router boots.
+      (Based on spa-github-pages by Rafael Pedicini, MIT.)
+    -->
+    <script>
+      var segments = 1; // path segments to keep: the repo name on a project site (skyrim-quests)
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + segments).join('/') + '/?p=/' +
+        l.pathname.slice(1).split('/').slice(segments).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
+    </script>
+  </head>
+  <body></body>
+</html>
