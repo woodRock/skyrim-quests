@@ -29,11 +29,18 @@ Game rules live in `src/game/logic.ts` with tests in `src/game/logic.test.ts`; s
 ## Saves and sync
 
 - **Local mode** (default): with no Firebase config, saves stay in this browser and sign-in only needs an email.
-- **Cloud mode**: fill `.env` from `.env.example` with a Firebase web config. Sign-in uses Firebase Auth (email/password and Google). Saves live at `users/{uid}/saves/{slot}` and work offline. Deploy `firestore.rules` so each player can only reach their own saves:
+- **Cloud mode**: fill `.env` from `.env.example` with a Firebase web config. Sign-in uses Firebase Auth (email/password and Google). Saves live at `users/{uid}/saves/{slot}` and work offline.
+
+The production build shares the `moody-bitch` Firebase project with the original app, so players keep one account. A Firestore deploy replaces every rule in the project, which is why `firestore.rules` here is a byte-for-byte copy of `moody-bitch/firestore.rules` (the save-slot block is at the end). Change it there, copy it here, then deploy from either repo:
   ```bash
   bunx firebase-tools login
-  bunx firebase-tools use <project-id>
-  bunx firebase-tools deploy --only firestore
+  bunx firebase-tools deploy --only firestore:rules
+  ```
+
+To try cloud mode without touching real data, run the emulators and point the dev server at them:
+  ```bash
+  bun run emulators                       # Auth on 9099, Firestore on 8085
+  VITE_USE_EMULATORS=true bun run dev
   ```
 
 ## The scribe (AI lore)

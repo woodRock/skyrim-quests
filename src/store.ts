@@ -48,7 +48,7 @@ export const useGame = create<State>((set, get) => {
     const { user, file } = get()
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = null
-    if (user && file) void backend.saveFile(user.uid, file)
+    if (user && file) backend.saveFile(user.uid, file).catch((e: unknown) => console.error('save failed', e))
   }
   const queueSave = () => { if (saveTimer) clearTimeout(saveTimer); saveTimer = setTimeout(flushSave, 300) }
   if (typeof window !== 'undefined') {
@@ -111,7 +111,7 @@ export const useGame = create<State>((set, get) => {
       const file = newFile(slot, name, race)
       const slots = [...get().slots]; slots[slot - 1] = file
       set({ slots, newSlot: null })
-      void backend.saveFile(user.uid, file)
+      backend.saveFile(user.uid, file).catch((e: unknown) => console.error('save failed', e))
       void get().loadThrough(() => set({ file, screen: 'game', events: [], paused: false, died: false }), 'riverwood')
     },
 

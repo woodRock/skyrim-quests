@@ -1,12 +1,144 @@
+// Firestore rules for the shared 'moody-bitch' Firebase project.
+// Both apps deploy the SAME file: a deploy replaces every rule in the project, so this
+// copy must stay identical to moody-bitch/firestore.rules.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // One document per save slot, readable and writable only by its owner.
-    match /users/{uid}/saves/{slot} {
-      allow read, write: if request.auth != null && request.auth.uid == uid
-        && slot in ['1', '2', '3']
-        && (request.method == 'delete' || request.resource.data.size() <= 40);
+
+    // ---- helpers -------------------------------------------------------
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function ownsNew() { return signedIn() && request.resource.data.userId == request.auth.uid; }
+    function ownsExisting() { return signedIn() && resource.data.userId == request.auth.uid; }
+    function keepsOwner() { return request.resource.data.userId == resource.data.userId; }
+    function isStr(v, max) { return v is string && v.size() <= max; }
+    function isNum(v, lo, hi) { return v is number && v >= lo && v <= hi; }
+    function isInt(v, lo, hi) { return v is int && v >= lo && v <= hi; }
+    function isTs(v) { return v is timestamp; }
+    function onlyKeys(allowed) { return request.resource.data.keys().hasOnly(allowed); }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    // ---- moodEntries: one document per daily log ----------------------
+    function validEntry() {
+      let d = request.resource.data;
+      return onlyKeys(['userId', 'mood', 'energy', 'sleep', 'highlights', 'timestamp'])
+        && isInt(d.mood, 1, 10)
+        && isInt(d.energy, 1, 10)
+        && isNum(d.sleep, 0, 24)
+        && d.highlights is list && d.highlights.size() <= 5
+        && isTs(d.timestamp);
     }
-    match /{document=**} { allow read, write: if false; }
+    match /moodEntries/{entryId} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsNew() && validEntry();
+      allow update: if ownsExisting() && keepsOwner() && validEntry();
+    }
+
+    // ---- quests --------------------------------------------------------
+    function validQuest() {
+      let d = request.resource.data;
+      return onlyKeys(['userId', 'title', 'description', 'type', 'skill', 'completed', 'lastCompleted', 'createdAt'])
+        && isStr(d.title, 80) && d.title.size() > 0
+        && isStr(d.description, 2000)
+        && d.type in ['daily', 'weekly', 'one-off']
+        && isStr(d.skill, 32)
+        && d.completed is bool
+        && (!('lastCompleted' in d) || d.lastCompleted == null || isTs(d.lastCompleted))
+        && (!('createdAt' in d) || isTs(d.createdAt));
+    }
+    function validQuestUpdate() {
+      let d = request.resource.data;
+      let c = changed();
+      return c.hasOnly(['title', 'description', 'type', 'skill', 'completed', 'lastCompleted'])
+        && (!('title' in c) || (isStr(d.title, 80) && d.title.size() > 0))
+        && (!('description' in c) || isStr(d.description, 2000))
+        && (!('type' in c) || d.type in ['daily', 'weekly', 'one-off'])
+        && (!('skill' in c) || isStr(d.skill, 32))
+        && (!('completed' in c) || d.completed is bool)
+        && (!('lastCompleted' in c) || d.lastCompleted == null || isTs(d.lastCompleted));
+    }
+    match /quests/{questId} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsNew() && validQuest();
+      allow update: if ownsExisting() && keepsOwner() && validQuestUpdate();
+    }
+
+    // ---- userStats: one document per player, keyed by uid ---------------
+    function validStats() {
+      let d = request.resource.data;
+      return onlyKeys(['name', 'level', 'xp', 'xpToNextLevel', 'health', 'magicka', 'stamina', 'healthMax', 'magickaMax',
+                       'staminaMax', 'skillPoints', 'pendingLevelUps', 'race', 'perks', 'skills', 'inventory', 'equippedItemId',
+                       'completedQuestCount', 'surgeEndTime', 'slowTimeEndTime', 'zenMode', 'trackLocation', 'bestStreak',
+                       'questCompletions', 'vitalsUpdatedAt', 'standingStone', 'stoneChangedAt', 'onboarded', 'shoutCooldownUntil'])
+        && isStr(d.name, 24)
+        && isNum(d.level, 1, 1000)
+        && isNum(d.xp, 0, 10000000) && isNum(d.xpToNextLevel, 1, 100000000)
+        && isNum(d.health, 0, 10000) && isNum(d.magicka, 0, 10000) && isNum(d.stamina, 0, 10000)
+        && isNum(d.healthMax, 1, 10000) && isNum(d.magickaMax, 1, 10000) && isNum(d.staminaMax, 1, 10000)
+        && isNum(d.skillPoints, 0, 1000) && isNum(d.pendingLevelUps, 0, 1000)
+        && isStr(d.race, 24)
+        && d.perks is list && d.perks.size() <= 200
+        && d.skills is map && d.skills.size() <= 16
+        && d.inventory is list && d.inventory.size() <= 60
+        && (d.equippedItemId == null || isStr(d.equippedItemId, 40))
+        && isNum(d.completedQuestCount, 0, 1000000)
+        && isNum(d.surgeEndTime, 0, 10000000000000) && isNum(d.slowTimeEndTime, 0, 10000000000000)
+        && d.zenMode is bool && d.trackLocation is bool
+        && isNum(d.bestStreak, 0, 100000)
+        && d.questCompletions is map && d.questCompletions.size() <= 32
+        && isNum(d.vitalsUpdatedAt, 0, 10000000000000)
+        && (d.standingStone == null || isStr(d.standingStone, 24))
+        && isNum(d.stoneChangedAt, 0, 10000000000000)
+        && d.onboarded is bool
+        && isNum(d.shoutCooldownUntil, 0, 10000000000000);
+    }
+    match /userStats/{userId} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && validStats();
+    }
+
+    // ---- locationHistory: where notable things happened ---------------
+    function validLocation() {
+      let d = request.resource.data;
+      return onlyKeys(['userId', 'lat', 'lng', 'timestamp', 'label'])
+        && isNum(d.lat, -90, 90) && isNum(d.lng, -180, 180)
+        && isTs(d.timestamp)
+        && (!('label' in d) || isStr(d.label, 120));
+    }
+    match /locationHistory/{locationId} {
+      allow read, delete: if ownsExisting();
+      allow create: if ownsNew() && validLocation();
+      allow update: if false;
+    }
+
+    // ---- Skyrim Quests saves: one document per save slot ----------------
+    // The rewrite at github.com/woodRock/skyrim-quests shares this project.
+    function validSave(slot) {
+      let d = request.resource.data;
+      return d.size() <= 40
+        && string(d.slot) == slot
+        && isStr(d.name, 24) && d.name.size() > 0
+        && isStr(d.race, 24)
+        && isInt(d.level, 1, 1000)
+        && isNum(d.xp, 0, 100000000)
+        && isNum(d.gold, 0, 100000000)
+        && isNum(d.health, 0, 10000) && isNum(d.magicka, 0, 10000) && isNum(d.stamina, 0, 10000)
+        && d.perks is list && d.perks.size() <= 200
+        && d.skills is map && d.skills.size() <= 16
+        && d.quests is list && d.quests.size() <= 500
+        && d.chronicles is list && d.chronicles.size() <= 5000
+        && d.items is list && d.items.size() <= 100
+        && d.holds is list && d.holds.size() <= 16
+        && d.hold is string;
+    }
+    match /users/{uid}/saves/{slot} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && slot in ['1', '2', '3'] && validSave(slot);
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }

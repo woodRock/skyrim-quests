@@ -1,10 +1,11 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
 import {
-  GoogleAuthProvider, createUserWithEmailAndPassword, getAuth, onAuthStateChanged,
+  GoogleAuthProvider, connectAuthEmulator, createUserWithEmailAndPassword, getAuth, onAuthStateChanged,
   signInWithEmailAndPassword, signInWithPopup, signOut, type Auth,
 } from 'firebase/auth'
 import {
-  collection, deleteDoc, doc, initializeFirestore, onSnapshot, persistentLocalCache, persistentMultipleTabManager, setDoc,
+  collection, connectFirestoreEmulator, deleteDoc, doc, initializeFirestore, onSnapshot, persistentLocalCache,
+  persistentMultipleTabManager, setDoc,
 } from 'firebase/firestore'
 import type { GameFile } from '../game/types'
 
@@ -36,7 +37,15 @@ const toSlots = (files: GameFile[]): Slots => [1, 2, 3].map((s) => files.find((f
 function cloudBackend(app: FirebaseApp): Backend {
   const auth: Auth = getAuth(app)
   // Persistent cache: the quest log works offline and syncs when back online.
-  const db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
+  // Optional quest fields (due, lore, doneAt...) may be undefined; Firestore must drop them rather than reject the save.
+  const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    ignoreUndefinedProperties: true,
+  })
+  if (env.VITE_USE_EMULATORS === 'true') {
+    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
+    connectFirestoreEmulator(db, '127.0.0.1', 8085)
+  }
   const saves = (uid: string) => collection(db, 'users', uid, 'saves')
   return {
     mode: 'cloud',
