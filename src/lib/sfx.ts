@@ -1,5 +1,5 @@
 /** Sound effects from /public/sounds, unlocked by the first tap. */
-export type Sfx = 'click' | 'open' | 'close' | 'quest' | 'accept' | 'objective' | 'levelup' | 'skillup' | 'spell' | 'item' | 'swish' | 'damage' | 'died'
+export type Sfx = 'click' | 'open' | 'close' | 'quest' | 'accept' | 'objective' | 'levelup' | 'skillup' | 'spell' | 'item' | 'swish' | 'page' | 'damage' | 'died'
 
 const FILES: Record<Sfx, { file: string; gain: number }> = {
   click: { file: 'click.mp3', gain: 0.2 }, open: { file: 'click.mp3', gain: 0.3 }, close: { file: 'click.mp3', gain: 0.25 },
@@ -8,6 +8,7 @@ const FILES: Record<Sfx, { file: string; gain: number }> = {
   quest: { file: 'quest-complete.mp3', gain: 0.7 }, accept: { file: 'quest-new.mp3', gain: 0.55 }, objective: { file: 'objective.mp3', gain: 0.5 },
   levelup: { file: 'levelup.mp3', gain: 0.8 }, skillup: { file: 'skillup.mp3', gain: 0.45 },
   spell: { file: 'spell.mp3', gain: 0.35 }, item: { file: 'item.mp3', gain: 0.4 }, swish: { file: 'swish.mp3', gain: 0.3 },
+  page: { file: 'page.mp3', gain: 0.35 },  // a soft brush of parchment for turning between skills
   damage: { file: 'item.mp3', gain: 0.5 }, died: { file: 'spell.mp3', gain: 0.6 },
 }
 const KEY = 'skyrim.muted'

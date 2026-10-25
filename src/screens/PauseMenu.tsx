@@ -27,12 +27,12 @@ function Skills() {
   return (
     <>
       <div className="skill-nav">
-        <button className="arrow" onClick={() => { play('swish'); setFocus(null); setConIdx((conIdx + CONSTELLATIONS.length - 1) % CONSTELLATIONS.length) }} aria-label="Previous skill">‹</button>
+        <button className="arrow" onClick={() => { play('page'); setFocus(null); setConIdx((conIdx + CONSTELLATIONS.length - 1) % CONSTELLATIONS.length) }} aria-label="Previous skill">‹</button>
         <div className="center">
           <div className="skyrim-font big">{con.name} <span className="gold">{skill.level}</span></div>
           <div className="meaning">{SKILL_MEANING[con.skillKey as keyof typeof SKILL_MEANING]} · {skill.xp}/{skill.xpToNext} XP</div>
         </div>
-        <button className="arrow" onClick={() => { play('swish'); setFocus(null); setConIdx((conIdx + 1) % CONSTELLATIONS.length) }} aria-label="Next skill">›</button>
+        <button className="arrow" onClick={() => { play('page'); setFocus(null); setConIdx((conIdx + 1) % CONSTELLATIONS.length) }} aria-label="Next skill">›</button>
       </div>
       <div className="con-wrap"><Constellation con={con} file={file} focused={focus} onStar={(id) => { play('click'); setFocus(id) }} size={260} /></div>
       <div className="perk-info">
