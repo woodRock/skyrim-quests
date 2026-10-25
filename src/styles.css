@@ -269,3 +269,30 @@ textarea.input { resize: vertical; }
 .died h1 { font-size: 40px; letter-spacing: 12px; color: #8b0000; text-shadow: 0 0 30px rgba(139, 0, 0, 0.8); }
 .died p { color: #999; max-width: 320px; font-size: 16px; }
 .died .stack { display: grid; gap: 10px; width: 240px; }
+
+/* ---------- the Guardian Stones, standing on their hold ---------- */
+.stones { margin-bottom: 10px; }
+.stone-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.stone { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; min-height: 150px; padding: 14px 6px 12px;
+  background: linear-gradient(180deg, rgba(90, 96, 112, 0.55), rgba(30, 33, 42, 0.9)); border: 1px solid rgba(255, 255, 255, 0.18); color: #ddd; text-align: center;
+  clip-path: polygon(18% 0, 82% 0, 100% 12%, 100% 100%, 0 100%, 0 12%); transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; }
+.stone:active { transform: translateY(2px); }
+.stone .glyph { font-size: 26px; filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.25)); }
+.stone .name { font-size: 11px; color: #fff; }
+.stone .sub { font-size: 11px; color: #aaa; line-height: 1.3; }
+.stone .yours { font-size: 9px; color: var(--gold); letter-spacing: 2px; margin-top: 2px; }
+.stone.on { border-color: var(--gold); color: #fff; background: linear-gradient(180deg, rgba(120, 104, 60, 0.55), rgba(40, 36, 24, 0.95)); box-shadow: 0 0 24px rgba(230, 194, 120, 0.35), inset 0 0 30px rgba(230, 194, 120, 0.15); }
+.stone.on::before { content: ''; position: absolute; left: 50%; top: -40px; width: 2px; height: 40px; background: linear-gradient(transparent, var(--gold)); transform: translateX(-50%); }
+.stone-text { text-align: center; color: #ccc; margin: 10px 4px 0; font-size: 15px; text-shadow: 0 1px 3px #000; }
+
+/* ---------- Tab · QUESTS ---------- */
+.qgroup { margin-bottom: 4px; }
+.qrow { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); color: #eee; }
+.qrow .diamond { flex: none; margin: 0 4px; }
+.qrow .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.qrow .body .skyrim-font { overflow: hidden; text-overflow: ellipsis; }
+.qrow .sub { color: #999; font-size: 13px; }
+.qrow .sub .late, .qrow.late .cost { color: #ff8a80; }
+.qrow.late { border-left: 2px solid rgba(224, 90, 78, 0.6); }
+.qrow .cost { color: var(--gold); font-size: 11px; white-space: nowrap; }
+.qrow.done .skyrim-font { color: #888; text-decoration: line-through; }

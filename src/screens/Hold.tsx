@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { holdById } from '../game/holds'
-import { addQuest, completeSide, isOverdue, markMisc, markTip, miscDoneToday, removeQuest, today, updateQuest } from '../game/logic'
-import { LYDIA_TIPS, SKILL_MEANING } from '../game/spells'
-import type { Quest } from '../game/types'
+import { addQuest, chooseStone, completeSide, isOverdue, markMisc, markTip, miscDoneToday, removeQuest, today, updateQuest } from '../game/logic'
+import { LYDIA_TIPS, SKILL_MEANING, STONES } from '../game/spells'
+import { fmtDue } from '../game/text'
+import type { GameFile, Quest } from '../game/types'
 import { questLore } from '../lib/lore'
 import { play } from '../lib/sfx'
 import { useGame } from '../store'
@@ -16,14 +17,6 @@ import { PauseMenu } from './PauseMenu'
 import { QuestEditor, type Draft } from './QuestEditor'
 
 type Sheet = { type: 'new' } | { type: 'edit'; id: string } | { type: 'main'; id: string } | { type: 'chronicle' } | null
-
-const fmtDue = (due: string) => {
-  const diff = Math.round((Date.parse(due + 'T00:00:00') - Date.parse(today() + 'T00:00:00')) / 86_400_000)
-  if (diff === 0) return 'due today'
-  if (diff === 1) return 'due tomorrow'
-  if (diff < 0) return `${-diff} day${diff === -1 ? '' : 's'} overdue`
-  return `due ${new Date(due + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
-}
 
 function Row({ q, onOpen, onAct }: { q: Quest; onOpen: () => void; onAct: () => void }) {
   const overdue = isOverdue(q)
@@ -48,6 +41,31 @@ function Row({ q, onOpen, onAct }: { q: Quest; onOpen: () => void; onAct: () => 
         {q.kind === 'main' && objs.length > 0 && <span className="progress"><span style={{ width: `${(cleared / objs.length) * 100}%` }} /></span>}
       </button>
       {burst > 0 && <span className="xp-float skyrim-font">+{q.kind === 'misc' ? 15 : { small: 20, medium: 40, large: 80 }[q.size]} {q.skill}</span>}
+    </div>
+  )
+}
+
+/** The Guardian Stones themselves: three menhirs on the ground of their hold. Tap one to train under its sign. */
+function StoneCircle({ file, commit }: { file: GameFile; commit: ReturnType<typeof useGame.getState>['commit'] }) {
+  const current = STONES.find((s) => s.id === file.stone)
+  return (
+    <div className="stones">
+      <div className="section skyrim-font">THE GUARDIAN STONES <span className="meaning">{current ? 'tap another to change your sign' : 'tap a stone to choose your sign'}</span></div>
+      <div className="stone-row">
+        {STONES.map((s) => {
+          const on = file.stone === s.id
+          return (
+            <button key={s.id} className={`stone ${on ? 'on' : ''}`} aria-pressed={on}
+              onClick={() => { const r = chooseStone(file, s.id); if (r.file === file) return play('close'); play('spell'); commit(r.file, r.events) }}>
+              <span className="glyph" aria-hidden="true">{s.icon}</span>
+              <span className="skyrim-font name">{s.name.replace(/^The /, '').replace(/ Stone$/, '')}</span>
+              <span className="serif sub">{s.skills.map((k) => k.toLowerCase()).join(' · ')}</span>
+              {on && <span className="skyrim-font yours">YOUR SIGN</span>}
+            </button>
+          )
+        })}
+      </div>
+      <p className="serif stone-text">{current ? current.text : 'Skills under your sign train 20% faster. You may return to change it.'}</p>
     </div>
   )
 }
@@ -130,6 +148,7 @@ export function Hold() {
       </div>
 
       <div className="log">
+        {file.hold === 'stones' && !showDone && <StoneCircle file={file} commit={commit} />}
         {showDone ? (
           <>
             <div className="section skyrim-font">COMPLETED</div>
@@ -137,7 +156,7 @@ export function Hold() {
             {done.map((q) => <Row key={q.id} q={q} onOpen={() => open(q)} onAct={() => undefined} />)}
           </>
         ) : empty ? (
-          <div className="empty serif">No quests in {hold.name}.<br />Press <span className="hl">NEW QUEST</span> to take one on.</div>
+          file.hold === 'stones' ? null : <div className="empty serif">No quests in {hold.name}.<br />Press <span className="hl">NEW QUEST</span> to take one on.</div>
         ) : (
           <>
             {mains.length > 0 && <div className="section skyrim-font">MAIN QUESTS</div>}

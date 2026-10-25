@@ -1,3 +1,4 @@
+import { today } from './logic'
 import { CONSTELLATIONS } from './constellations'
 import { holdById } from './holds'
 import { itemById } from './items'
@@ -24,4 +25,13 @@ export function eventText(e: GameEvent): string {
     case 'died': return ''
     case 'gold': case 'xp': case 'heal': case 'stamina': case 'objective': return ''
   }
+}
+
+/** "due today", "2 days overdue", "due Nov 3". */
+export const fmtDue = (due: string, day = today()) => {
+  const diff = Math.round((Date.parse(due + 'T00:00:00') - Date.parse(day + 'T00:00:00')) / 86_400_000)
+  if (diff === 0) return 'due today'
+  if (diff === 1) return 'due tomorrow'
+  if (diff < 0) return `${-diff} day${diff === -1 ? '' : 's'} overdue`
+  return `due ${new Date(due + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
 }
