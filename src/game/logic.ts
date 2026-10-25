@@ -261,7 +261,7 @@ export function scribeChronicle(file: GameFile, entry: Omit<Chronicle, 'day' | '
     mood: clamp(Math.round(entry.mood), 1, 10), energy: clamp(Math.round(entry.energy), 1, 10),
     rest: clamp(entry.rest, 0, 24), triumphs: entry.triumphs.map((t) => t.trim()).filter(Boolean).slice(0, 3),
   }
-  f.chronicles = [...f.chronicles, c].slice(-365)
+  f.chronicles = [...f.chronicles, c].slice(-3650)  // ten years of nights; the rules allow 5000
   const last = file.chronicles[file.chronicles.length - 1]
   f.streak = last && last.day === yesterdayOf(day) ? f.streak + 1 : 1
   f.bestStreak = Math.max(f.bestStreak, f.streak)
