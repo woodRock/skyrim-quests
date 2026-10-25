@@ -18,7 +18,7 @@ export function MainQuestView({ quest, onEdit, onClose }: { quest: Quest; onEdit
     if (!file) return
     const r = clearObjective(file, quest.id, id)
     if (r.file === file) return
-    play(r.events.some((e) => e.type === 'dragon') ? 'swish' : 'quest')
+    play('quest')
     commit(r.file, r.events)
   }
   const slay = () => { if (!file) return; const r = slayDragon(file, quest.id); play('levelup'); commit(r.file, r.events); onClose() }

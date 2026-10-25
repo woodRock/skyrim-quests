@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { holdById } from '../game/holds'
+import { holdById, questsVisibleFrom } from '../game/holds'
 import { addQuest, chooseStone, completeSide, isOverdue, markMisc, markTip, miscDoneToday, removeQuest, today, updateQuest } from '../game/logic'
 import { LYDIA_TIPS, SKILL_MEANING, STONES } from '../game/spells'
 import { fmtDue } from '../game/text'
@@ -18,7 +18,7 @@ import { QuestEditor, type Draft } from './QuestEditor'
 
 type Sheet = { type: 'new' } | { type: 'edit'; id: string } | { type: 'main'; id: string } | { type: 'chronicle' } | null
 
-function Row({ q, onOpen, onAct }: { q: Quest; onOpen: () => void; onAct: () => void }) {
+function Row({ q, onOpen, onAct, showHold }: { q: Quest; onOpen: () => void; onAct: () => void; showHold?: boolean }) {
   const overdue = isOverdue(q)
   const done = !!q.doneAt || miscDoneToday(q)
   const objs = q.objectives ?? []
@@ -33,6 +33,7 @@ function Row({ q, onOpen, onAct }: { q: Quest; onOpen: () => void; onAct: () => 
       <button className="q-main" onClick={onOpen}>
         <span className="q-title skyrim-font">{q.title}</span>
         <span className="q-meta serif">
+          {showHold && q.hold !== 'riverwood' && <span className="where">{holdById(q.hold).name} · </span>}
           {q.skill} <i className="meaning">· {SKILL_MEANING[q.skill]}</i>
           {q.kind === 'main' && <span> · {cleared}/{objs.length} objectives</span>}
           {q.kind === 'misc' && <span> · {done ? 'done today' : 'today'}</span>}
@@ -78,7 +79,7 @@ export function Hold() {
   const [showDone, setShowDone] = useState(false)
   const hold = file ? holdById(file.hold) : null
 
-  const quests = useMemo(() => (file?.quests ?? []).filter((q) => q.hold === file?.hold), [file?.quests, file?.hold])
+  const quests = useMemo(() => (file ? questsVisibleFrom(file, file.hold) : []), [file])
   const busy = !!loading || events.length > 0 || paused || !!sheet || !!tip || died || (file?.pendingLevels ?? 0) > 0
 
   // Lydia speaks once per tip, when nothing else is on screen.
@@ -133,6 +134,7 @@ export function Hold() {
   }
 
   const empty = mains.length + sides.length + miscs.length === 0
+  const hub = file.hold === 'riverwood'
 
   return (
     <div className="screen world">
@@ -153,18 +155,18 @@ export function Hold() {
           <>
             <div className="section skyrim-font">COMPLETED</div>
             {done.length === 0 && <div className="empty serif">Nothing finished here yet.</div>}
-            {done.map((q) => <Row key={q.id} q={q} onOpen={() => open(q)} onAct={() => undefined} />)}
+            {done.map((q) => <Row key={q.id} q={q} onOpen={() => open(q)} onAct={() => undefined} showHold={hub} />)}
           </>
         ) : empty ? (
-          file.hold === 'stones' ? null : <div className="empty serif">No quests in {hold.name}.<br />Press <span className="hl">NEW QUEST</span> to take one on.</div>
+          file.hold === 'stones' ? null : <div className="empty serif">{hub ? 'No quests anywhere in Skyrim.' : `No quests in ${hold.name}.`}<br />Press <span className="hl">NEW QUEST</span> to take one on.</div>
         ) : (
           <>
             {mains.length > 0 && <div className="section skyrim-font">MAIN QUESTS</div>}
-            {mains.map((q) => <Row key={q.id} q={q} onOpen={() => open(q)} onAct={() => act(q)} />)}
+            {mains.map((q) => <Row key={q.id} q={q} onOpen={() => open(q)} onAct={() => act(q)} showHold={hub} />)}
             {sides.length > 0 && <div className="section skyrim-font">SIDE QUESTS</div>}
-            {sides.map((q) => <Row key={q.id} q={q} onOpen={() => open(q)} onAct={() => act(q)} />)}
+            {sides.map((q) => <Row key={q.id} q={q} onOpen={() => open(q)} onAct={() => act(q)} showHold={hub} />)}
             {miscs.length > 0 && <div className="section skyrim-font">MISCELLANEOUS</div>}
-            {miscs.map((q) => <Row key={q.id} q={q} onOpen={() => open(q)} onAct={() => act(q)} />)}
+            {miscs.map((q) => <Row key={q.id} q={q} onOpen={() => open(q)} onAct={() => act(q)} showHold={hub} />)}
           </>
         )}
       </div>

@@ -59,7 +59,7 @@ export function EventPlayer() {
       return
     }
     if (e.type === 'died') { shiftEvent(); return }
-    play(e.type === 'levelUp' ? 'levelup' : e.type === 'skillUp' ? 'skillup' : e.type === 'damage' ? 'damage' : e.type === 'hold' ? 'swish' : 'item')
+    play(e.type === 'levelUp' ? 'levelup' : e.type === 'skillUp' ? 'skillup' : e.type === 'damage' ? 'damage' : e.type === 'hold' ? 'travel' : 'item')
   }, [e, big, shiftEvent, loading])
 
   if (!e || !big || loading || e.type === 'died') return null

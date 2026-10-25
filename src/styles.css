@@ -285,14 +285,4 @@ textarea.input { resize: vertical; }
 .stone.on::before { content: ''; position: absolute; left: 50%; top: -40px; width: 2px; height: 40px; background: linear-gradient(transparent, var(--gold)); transform: translateX(-50%); }
 .stone-text { text-align: center; color: #ccc; margin: 10px 4px 0; font-size: 15px; text-shadow: 0 1px 3px #000; }
 
-/* ---------- Tab · QUESTS ---------- */
-.qgroup { margin-bottom: 4px; }
-.qrow { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); color: #eee; }
-.qrow .diamond { flex: none; margin: 0 4px; }
-.qrow .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
-.qrow .body .skyrim-font { overflow: hidden; text-overflow: ellipsis; }
-.qrow .sub { color: #999; font-size: 13px; }
-.qrow .sub .late, .qrow.late .cost { color: #ff8a80; }
-.qrow.late { border-left: 2px solid rgba(224, 90, 78, 0.6); }
-.qrow .cost { color: var(--gold); font-size: 11px; white-space: nowrap; }
-.qrow.done .skyrim-font { color: #888; text-decoration: line-through; }
+.q-meta .where { color: #c9b07a; font-style: italic; }

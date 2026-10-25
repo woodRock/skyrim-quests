@@ -1,19 +1,18 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CONSTELLATIONS } from '../game/constellations'
-import { HOLDS, holdById } from '../game/holds'
+import { HOLDS, questsVisibleFrom } from '../game/holds'
 import { ITEMS, itemById } from '../game/items'
-import { buyItem, castSpell, chooseStone, isOverdue, miscDoneToday, perkStatus, shout, spellCost, unlockPerk, consumeItem } from '../game/logic'
-import { fmtDue } from '../game/text'
+import { buyItem, castSpell, chooseStone, perkStatus, shout, spellCost, unlockPerk, consumeItem } from '../game/logic'
 import { SHOUTS, SHOUT_MINUTES, SKILL_MEANING, SPELLS, STONES } from '../game/spells'
-import type { Quest, SpellId } from '../game/types'
+import type { SpellId } from '../game/types'
 import { isMuted, play, setMuted } from '../lib/sfx'
 import { useGame } from '../store'
 import { Constellation } from '../ui/Constellation'
 import { energyEmoji, moodEmoji } from './ChronicleSheet'
 import { SpellCast } from './SpellCast'
 
-const PAGES = ['SKILLS', 'QUESTS', 'MAP', 'MAGIC', 'ITEMS', 'JOURNAL'] as const
+const PAGES = ['SKILLS', 'MAP', 'MAGIC', 'ITEMS', 'JOURNAL'] as const
 
 function Skills() {
   const { file, commit } = useGame()
@@ -56,13 +55,13 @@ function Map() {
   if (!file) return null
   return (
     <div className="holds">
-      <div className="section skyrim-font" style={{ gridColumn: '1 / -1', margin: '0 0 2px' }}>THE MAP <span className="meaning">side and main quests open holds · dailies count each day</span></div>
+      <div className="section skyrim-font" style={{ gridColumn: '1 / -1', margin: '0 0 2px' }}>THE MAP <span className="meaning">Riverwood shows every quest · finishing quests opens holds</span></div>
       {HOLDS.map((h) => {
         const open = file.holds.includes(h.id)
         const here = file.hold === h.id
-        const active = file.quests.filter((q) => q.hold === h.id && !q.doneAt).length
+        const active = questsVisibleFrom(file, h.id).filter((q) => !q.doneAt).length
         return (
-          <button key={h.id} className={`hold-card ${here ? 'here' : ''}`} disabled={!open || here} onClick={() => { play('open'); travel(h.id) }} style={open ? { background: `linear-gradient(${h.sky[0]}, ${h.sky[1]})` } : undefined}>
+          <button key={h.id} className={`hold-card ${here ? 'here' : ''}`} disabled={!open || here} onClick={() => { play('travel'); travel(h.id) }} style={open ? { background: `linear-gradient(${h.sky[0]}, ${h.sky[1]})` } : undefined}>
             <span className="skyrim-font">{open ? h.name : '???'}</span>
             <span className="serif sub">{open ? h.hint : h.unlock}</span>
             {open ? <span className="meaning">{here ? 'you are here' : `${active} active`}</span>
@@ -155,62 +154,6 @@ function Items() {
   )
 }
 
-const KIND = { main: 0, side: 1, misc: 2 } as const
-const questOrder = (a: Quest, b: Quest) => KIND[a.kind] - KIND[b.kind] || (a.due ?? '9999').localeCompare(b.due ?? '9999') || b.createdAt - a.createdAt
-
-/** Every open quest in Skyrim, grouped by hold. Tap one to go where it is. */
-function Quests() {
-  const { file, travel, setPaused } = useGame()
-  if (!file) return null
-  const active = file.quests.filter((q) => !q.doneAt)
-  const overdue = active.filter((q) => isOverdue(q)).length
-  const finished = file.quests.filter((q) => q.doneAt)
-  const recent = [...finished].sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)).slice(0, 20)
-  const go = (q: Quest) => { if (q.hold === file.hold) { play('close'); setPaused(false) } else { play('swish'); travel(q.hold) } }
-  return (
-    <>
-      <div className="section skyrim-font">ALL QUESTS <span className="meaning">{active.length} open{overdue > 0 ? ` · ${overdue} overdue` : ''} · {finished.length} done</span></div>
-      {active.length === 0 && <div className="meaning">No open quests. Press NEW QUEST in any hold.</div>}
-      {HOLDS.filter((h) => active.some((q) => q.hold === h.id)).map((h) => (
-        <div key={h.id} className="qgroup">
-          <div className="section skyrim-font">{h.name} <span className="meaning">{h.id === file.hold ? 'you are here' : 'tap a quest to travel'}</span></div>
-          {active.filter((q) => q.hold === h.id).sort(questOrder).map((q) => {
-            const late = isOverdue(q)
-            const objs = q.objectives ?? []
-            return (
-              <button key={q.id} className={`qrow ${late ? 'late' : ''}`} onClick={() => go(q)}>
-                <span className={`diamond ${q.kind} ${q.kind === 'misc' && miscDoneToday(q) ? 'filled' : ''}`} />
-                <span className="body">
-                  <span className="skyrim-font">{q.title}</span>
-                  <span className="serif sub">
-                    {q.kind === 'main' ? `main quest · ${objs.filter((o) => o.done).length}/${objs.length} objectives` : q.kind === 'misc' ? (miscDoneToday(q) ? 'daily · done today' : 'daily') : 'side quest'}
-                    {' · '}{q.skill}{q.due && <> · <span className={late ? 'late' : ''}>{fmtDue(q.due)}</span></>}
-                  </span>
-                </span>
-                <span className="cost skyrim-font">{h.id === file.hold ? 'HERE' : 'GO'}</span>
-              </button>
-            )
-          })}
-        </div>
-      ))}
-      {recent.length > 0 && (
-        <>
-          <div className="section skyrim-font">COMPLETED <span className="meaning">most recent {recent.length}</span></div>
-          {recent.map((q) => (
-            <div key={q.id} className="qrow done">
-              <span className={`diamond ${q.kind} filled`} />
-              <span className="body">
-                <span className="skyrim-font">{q.title}</span>
-                <span className="serif sub">{holdById(q.hold).name} · {new Date(q.doneAt!).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-              </span>
-            </div>
-          ))}
-        </>
-      )}
-    </>
-  )
-}
-
 function Journal() {
   const { file } = useGame()
   if (!file) return null
@@ -270,7 +213,6 @@ export function PauseMenu() {
             variants={{ enter: (d: number) => ({ rotateY: d * -60, x: `${d * 40}%`, opacity: 0 }), center: { rotateY: 0, x: 0, opacity: 1 }, exit: (d: number) => ({ rotateY: d * 60, x: `${d * -40}%`, opacity: 0 }) }}
             initial="enter" animate="center" exit="exit" transition={{ duration: 0.3, ease: 'easeInOut' }}>
             {page === 'SKILLS' && <Skills />}
-            {page === 'QUESTS' && <Quests />}
             {page === 'MAP' && <Map />}
             {page === 'MAGIC' && <Magic />}
             {page === 'ITEMS' && <Items />}
