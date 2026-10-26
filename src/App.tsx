@@ -5,7 +5,7 @@ import { Login } from './screens/Login'
 import { Files } from './screens/Files'
 import { NewCharacter } from './screens/NewCharacter'
 import { Hold } from './screens/Hold'
-import { EventPlayer, LoadingScreen, YouDied } from './ui/Overlays'
+import { EventPlayer, LoadingScreen, Notice, YouDied } from './ui/Overlays'
 
 export default function App() {
   const { screen, user, go } = useGame()
@@ -22,6 +22,7 @@ export default function App() {
       {screen === 'game' && <Hold />}
       {screen === 'game' && <EventPlayer />}
       {screen === 'game' && <YouDied />}
+      <Notice />
       <LoadingScreen />
     </div>
   )

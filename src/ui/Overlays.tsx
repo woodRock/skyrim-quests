@@ -77,6 +77,24 @@ export function EventPlayer() {
   )
 }
 
+/** A word about your save: a newer one arrived from another device, or this one could not be written. */
+export function Notice() {
+  const notice = useGame((s) => s.notice)
+  const clear = useGame((s) => s.clearNotice)
+  useEffect(() => {
+    if (!notice) return
+    const t = setTimeout(clear, 6000)
+    return () => clearTimeout(t)
+  }, [notice, clear])
+  return (
+    <AnimatePresence>
+      {notice && (
+        <motion.div key={notice} className="notice serif" role="status" onClick={clear} initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>{notice}</motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 export function YouDied() {
   const { died, events, continueAfterDeath, quitToMenu } = useGame()
   const show = died && events.length === 0

@@ -1,4 +1,4 @@
-import { maxHealth } from '../game/logic'
+import { maxHealth, today } from '../game/logic'
 import { holdById } from '../game/holds'
 import type { GameFile } from '../game/types'
 
@@ -20,7 +20,7 @@ export function Bars({ file }: { file: GameFile }) {
 /** The compass strip: the hold you stand in, with how many quests wait here. */
 export function Compass({ file }: { file: GameFile }) {
   const here = file.quests.filter((q) => q.hold === file.hold)
-  const open = here.filter((q) => (q.kind === 'misc' ? q.lastDone !== new Date().toISOString().slice(0, 10) : !q.doneAt)).length
+  const open = here.filter((q) => (q.kind === 'misc' ? q.lastDone !== today() : !q.doneAt)).length
   return (
     <div className="compass">
       <span className="mark">W</span><span className="tick" /><span className="mark">NW</span><span className="tick" />
