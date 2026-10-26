@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { backend, type Slots, type User } from './lib/backend'
+import { backend, StaleSave, type Slots, type User } from './lib/backend'
 import { dailyTick, loadLastSave, newFile, travel as travelFile } from './game/logic'
 import { LOADING_TIPS } from './game/spells'
 import type { GameEvent, GameFile, HoldId } from './game/types'
@@ -20,6 +20,8 @@ interface State {
   loading: Loading | null
   paused: boolean
   died: boolean
+  /** A message about saving that the player should see, e.g. a newer save loaded from another device. */
+  notice: string | null
   init(): void
   go(screen: Screen): void
   loadThrough(mid: () => void, hold?: HoldId): Promise<void>
@@ -34,6 +36,7 @@ interface State {
   continueAfterDeath(): void
   quitToMenu(): void
   signOut(): Promise<void>
+  clearNotice(): void
 }
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -42,13 +45,50 @@ let initialized = false
 let unwatch: (() => void) | null = null
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let skipResolve: (() => void) | null = null
+// Per slot, the updatedAt of the stored save the in-memory file was built from (null: the slot was empty).
+// A save only lands if the stored copy is still that version, so a device that slept through
+// another's progress cannot overwrite it.
+const bases = new Map<number, number | null>()
+// Saves run one at a time, so each one checks against the version the previous one wrote.
+let saving: Promise<void> = Promise.resolve()
+// Bumped when a newer save is adopted, so saves queued from the old copy are dropped.
+let generation = 0
 
 export const useGame = create<State>((set, get) => {
+  const save = (user: User, file: GameFile) => {
+    const gen = generation
+    saving = saving.then(async () => {
+      const base = bases.get(file.slot) ?? null
+      if (gen !== generation || file.updatedAt === base) return
+      try {
+        await backend.saveFile(user.uid, file, base)
+        bases.set(file.slot, file.updatedAt)
+      } catch (e) {
+        if (e instanceof StaleSave) adopt(file.slot, e.newer)
+        else { console.error('save failed', e); set({ notice: 'Your progress could not be saved. Check your connection.' }) }
+      }
+    })
+    return saving
+  }
   const flushSave = () => {
     const { user, file } = get()
     if (saveTimer) clearTimeout(saveTimer)
     saveTimer = null
-    if (user && file) backend.saveFile(user.uid, file).catch((e: unknown) => console.error('save failed', e))
+    if (user && file) void save(user, file)
+  }
+  /** Another device saved (or erased) this slot since our copy was loaded: take theirs and drop our unsaved changes. */
+  const adopt = (slot: number, newer: GameFile | null) => {
+    generation += 1
+    if (saveTimer) clearTimeout(saveTimer)
+    saveTimer = null
+    bases.set(slot, newer?.updatedAt ?? null)
+    if (get().file?.slot !== slot) return
+    if (!newer) {
+      set({ file: null, screen: 'files', events: [], paused: false, died: false, notice: 'This save was erased on another device.' })
+      return
+    }
+    set({ file: newer, events: [], died: false, notice: 'A newer save from another device was loaded.' })
+    tick()
   }
   const queueSave = () => { if (saveTimer) clearTimeout(saveTimer); saveTimer = setTimeout(flushSave, 300) }
   if (typeof window !== 'undefined') {
@@ -64,7 +104,7 @@ export const useGame = create<State>((set, get) => {
 
   return {
     user: undefined, slots: [null, null, null], slotsLoaded: false, screen: 'title', newSlot: null,
-    file: null, events: [], loading: null, paused: false, died: false,
+    file: null, events: [], loading: null, paused: false, died: false, notice: null,
 
     init() {
       if (initialized) return
@@ -77,7 +117,11 @@ export const useGame = create<State>((set, get) => {
           set({ slots, slotsLoaded: true })
           const { file } = get()
           const incoming = file && slots[file.slot - 1]
-          if (incoming && incoming.updatedAt > file.updatedAt) set({ file: incoming })
+          if (incoming && incoming.updatedAt > file.updatedAt) {
+            generation += 1
+            bases.set(incoming.slot, incoming.updatedAt)
+            set({ file: incoming })
+          }
         })
       })
     },
@@ -102,6 +146,7 @@ export const useGame = create<State>((set, get) => {
     startFile(slot) {
       const file = get().slots[slot - 1]
       if (!file) return
+      bases.set(slot, file.updatedAt)
       void get().loadThrough(() => { set({ file, screen: 'game', events: [], paused: false, died: false }); tick() }, file.hold)
     },
 
@@ -109,9 +154,10 @@ export const useGame = create<State>((set, get) => {
       const { user } = get()
       if (!user) return
       const file = newFile(slot, name, race)
+      bases.set(slot, get().slots[slot - 1]?.updatedAt ?? null)
       const slots = [...get().slots]; slots[slot - 1] = file
       set({ slots, newSlot: null })
-      backend.saveFile(user.uid, file).catch((e: unknown) => console.error('save failed', e))
+      void save(user, file)
       void get().loadThrough(() => set({ file, screen: 'game', events: [], paused: false, died: false }), 'riverwood')
     },
 
@@ -147,5 +193,7 @@ export const useGame = create<State>((set, get) => {
     },
 
     async signOut() { flushSave(); await backend.signOut(); set({ screen: 'title', file: null }) },
+
+    clearNotice: () => set({ notice: null }),
   }
 })

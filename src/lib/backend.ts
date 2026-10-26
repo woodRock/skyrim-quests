@@ -5,12 +5,18 @@ import {
 } from 'firebase/auth'
 import {
   collection, connectFirestoreEmulator, deleteDoc, doc, initializeFirestore, onSnapshot, persistentLocalCache,
-  persistentMultipleTabManager, setDoc,
+  persistentMultipleTabManager, runTransaction, setDoc,
 } from 'firebase/firestore'
 import type { GameFile } from '../game/types'
 
 export interface User { uid: string; email: string | null }
 export type Slots = (GameFile | null)[]
+
+/** The stored save is not the version this change was made from (another device wrote or erased it since), so nothing was written. */
+export class StaleSave extends Error {
+  readonly newer: GameFile | null
+  constructor(newer: GameFile | null) { super('stale save'); this.newer = newer }
+}
 
 export interface Backend {
   mode: 'cloud' | 'local'
@@ -20,7 +26,11 @@ export interface Backend {
   signInWithGoogle?(): Promise<void>
   signOut(): Promise<void>
   watchFiles(uid: string, cb: (slots: Slots) => void): () => void
-  saveFile(uid: string, file: GameFile): Promise<void>
+  /**
+   * Write a save only if the stored copy is still `base` (its updatedAt, or null for an empty slot).
+   * Rejects with StaleSave carrying the stored copy otherwise.
+   */
+  saveFile(uid: string, file: GameFile, base: number | null): Promise<void>
   eraseFile(uid: string, slot: number): Promise<void>
   /** A Firebase ID token for the lore worker, when signed in to the cloud. */
   idToken(): Promise<string | null>
@@ -55,7 +65,20 @@ function cloudBackend(app: FirebaseApp): Backend {
     signInWithGoogle: async () => void (await signInWithPopup(auth, new GoogleAuthProvider())),
     signOut: () => signOut(auth),
     watchFiles: (uid, cb) => onSnapshot(saves(uid), (snap) => cb(toSlots(snap.docs.map((d) => d.data() as GameFile)))),
-    saveFile: (uid, file) => setDoc(doc(saves(uid), String(file.slot)), file),
+    saveFile: async (uid, file, base) => {
+      const ref = doc(saves(uid), String(file.slot))
+      try {
+        await runTransaction(db, async (tx) => {
+          const stored = (await tx.get(ref)).data() as GameFile | undefined
+          if ((stored?.updatedAt ?? null) !== base) throw new StaleSave(stored ?? null)
+          tx.set(ref, file)
+        })
+      } catch (e) {
+        // Transactions need the server. Offline, queue a plain write that lands once back online.
+        if ((e as { code?: string }).code === 'unavailable') { void setDoc(ref, file).catch((err: unknown) => console.error('save failed', err)); return }
+        throw e
+      }
+    },
     eraseFile: (uid, slot) => deleteDoc(doc(saves(uid), String(slot))),
     idToken: () => auth.currentUser?.getIdToken() ?? Promise.resolve(null),
   }
@@ -87,7 +110,12 @@ function localBackend(): Backend {
       queueMicrotask(() => cb(toSlots(read<GameFile[]>(filesKey(uid), []))))
       return () => fileListeners.get(uid)?.delete(cb)
     },
-    saveFile: async (uid, file) => { write(filesKey(uid), [...read<GameFile[]>(filesKey(uid), []).filter((f) => f.slot !== file.slot), file]); emit(uid) },
+    saveFile: async (uid, file, base) => {
+      const files = read<GameFile[]>(filesKey(uid), [])
+      const stored = files.find((f) => f.slot === file.slot)
+      if ((stored?.updatedAt ?? null) !== base) throw new StaleSave(stored ?? null)
+      write(filesKey(uid), [...files.filter((f) => f.slot !== file.slot), file]); emit(uid)
+    },
     eraseFile: async (uid, slot) => { write(filesKey(uid), read<GameFile[]>(filesKey(uid), []).filter((f) => f.slot !== slot)); emit(uid) },
     idToken: async () => null,
   }
