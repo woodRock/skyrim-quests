@@ -168,6 +168,17 @@ export function addQuest(file: GameFile, q: Omit<Quest, 'id' | 'createdAt'>, now
   return { file: f, events }
 }
 
+/** Put the given quests in this order, leaving every other quest where it is. The order of the list is the order of the day. */
+export function reorderQuests(file: GameFile, ids: string[]): GameFile {
+  const slots = file.quests.map((q, i) => (ids.includes(q.id) ? i : -1)).filter((i) => i >= 0)
+  if (slots.length !== ids.length) return file
+  const byId = new Map(file.quests.map((q) => [q.id, q]))
+  const quests = [...file.quests]
+  slots.forEach((slot, n) => { quests[slot] = byId.get(ids[n])! })
+  if (quests.every((q, i) => q === file.quests[i])) return file
+  return { ...file, quests, updatedAt: Date.now() }
+}
+
 export function updateQuest(file: GameFile, id: string, patch: Partial<Quest>): GameFile {
   const f = clone(file)
   f.quests = f.quests.map((q) => (q.id === id ? { ...q, ...patch } : q))

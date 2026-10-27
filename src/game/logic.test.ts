@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   addQuest, advanceLevel, buyItem, castSpell, chooseStone, clearObjective, completeSide, dailyTick, finishSpell,
   loadLastSave, markMisc, maxHealth, newFile, perkStatus, scribeChronicle, shout, slayDragon, today, unlockPerk,
-  consumeItem, xpMultiplier, UNBOUND_ID, yesterdayOf,
+  consumeItem, reorderQuests, xpMultiplier, UNBOUND_ID, yesterdayOf,
 } from './logic'
 import { CONSTELLATIONS } from './constellations'
 import { questsDone } from './holds'
@@ -221,5 +221,20 @@ describe('map progression', () => {
     expect(questsDone(f)).toBe(6)   // Unbound plus five mornings
     expect(f.holds).toContain('solitude')
     expect(opened).toEqual(['solitude@day4'])
+  })
+})
+
+describe('reordering', () => {
+  it('moves the named quests into the given order and leaves the rest in place', () => {
+    let f = base()
+    for (const t of ['A', 'B', 'C']) f = addQuest(f, { kind: 'side', title: t, skill: 'SPEECH', hold: 'riverwood', size: 'small' }, 1_000).file
+    const d = addQuest(f, { kind: 'misc', title: 'D', skill: 'ALCHEMY', hold: 'riverwood', size: 'small' }, 1_000).file
+    // newest first: D C B A Unbound
+    expect(d.quests.map((q) => q.title)).toEqual(['D', 'C', 'B', 'A', 'Unbound'])
+    const ids = (ts: string[]) => ts.map((t) => d.quests.find((q) => q.title === t)!.id)
+    const r = reorderQuests(d, ids(['A', 'C', 'B']))
+    expect(r.quests.map((q) => q.title)).toEqual(['D', 'A', 'C', 'B', 'Unbound'])
+    expect(reorderQuests(d, ids(['C', 'B', 'A']))).toBe(d)          // same order: untouched
+    expect(reorderQuests(d, ['nope'])).toBe(d)                      // unknown id: untouched
   })
 })

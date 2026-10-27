@@ -73,5 +73,7 @@ export default defineConfig(({ command, isPreview }) => ({
       },
     },
   },
-  test: { environment: 'jsdom', globals: true },
+  test: {
+    // Tests run on the local backend whatever a developer's .env says.
+    env: { VITE_FIREBASE_API_KEY: '', VITE_FIREBASE_PROJECT_ID: '' }, environment: 'jsdom', globals: true },
 }))

@@ -288,3 +288,9 @@ textarea.input { resize: vertical; }
 .q-meta .where { color: #c9b07a; font-style: italic; }
 
 .notice { position: absolute; left: 12px; right: 12px; top: calc(12px + var(--safe-top)); z-index: 60; padding: 10px 14px; background: var(--panel); border: 1px solid var(--gold); text-align: center; cursor: pointer; }
+
+/* ---------- drag to reorder ---------- */
+.grip { flex: none; width: 36px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 3px; cursor: grab; touch-action: none; opacity: 0.45; border-left: 1px solid rgba(255, 255, 255, 0.06); }
+.grip:active { cursor: grabbing; }
+.grip span { width: 14px; height: 1px; background: #ddd; }
+.quest:hover .grip { opacity: 0.8; }
